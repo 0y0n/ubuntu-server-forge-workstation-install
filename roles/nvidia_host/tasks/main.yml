@@ -8,12 +8,11 @@
   ansible.builtin.apt:
     name:
       - ubuntu-drivers-common
-      - nvidia-utils-{{ nvidia_driver_branch }}
     state: present
     update_cache: true
 
 - name: "nvidia_host | install recommended driver"
-  ansible.builtin.command: ubuntu-drivers autoinstall
+  ansible.builtin.command: ubuntu-drivers install
   register: nvidia_install
   changed_when: "'install' in nvidia_install.stdout.lower()"
 
