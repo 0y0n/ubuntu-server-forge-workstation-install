@@ -75,10 +75,11 @@ info "Installing Ansible …"
 if ! command -v ansible-playbook &>/dev/null; then
   # Install pipx (lightweight, isolated Python app installer)
   sudo apt-get install -y -qq pipx
-  pipx ensurepath
-  
+    
   # Install ansible via pipx (creates isolated venv automatically)
   pipx install --include-deps ansible
+  pipx ensurepath
+  source ~/.bashrc
   # Verify installation succeeded
   if ! command -v ansible-playbook &>/dev/null; then
     abort "Ansible installation failed. ansible-playbook not found in PATH."
