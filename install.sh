@@ -20,9 +20,9 @@ abort() { echo -e "${RED}[FORGE ABORT]${NC} $*" >&2; exit 1; }
 
 # ── constants ────────────────────────────────────────────────────────────────
 REPO_URL="https://github.com/0y0n/forge.git"
-REPO_DIR="${HOME}/forge"
+REPO_DIR="${HOME}/dev/forge"
 EXPECTED_OS_ID="ubuntu"
-EXPECTED_VERSION_ID="24.04"
+EXPECTED_VERSION_ID="25.10"
 
 # ── 1. OS guard ──────────────────────────────────────────────────────────────
 info "Checking OS …"
@@ -75,6 +75,7 @@ info "Installing Ansible …"
 if ! command -v ansible-playbook &>/dev/null; then
   # Install pipx (lightweight, isolated Python app installer)
   sudo apt-get install -y -qq pipx
+  pipx ensurepath
   
   # Install ansible via pipx (creates isolated venv automatically)
   export PIPX_HOME=/opt/pipx
