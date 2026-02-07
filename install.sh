@@ -78,8 +78,6 @@ if ! command -v ansible-playbook &>/dev/null; then
   pipx ensurepath
   
   # Install ansible via pipx (creates isolated venv automatically)
-  export PIPX_HOME=/opt/pipx
-  export PIPX_BIN_DIR=/usr/local/bin
   pipx install --include-deps ansible
   # Verify installation succeeded
   if ! command -v ansible-playbook &>/dev/null; then
