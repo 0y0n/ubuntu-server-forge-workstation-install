@@ -6,9 +6,9 @@
 - name: "base | verify Ubuntu 24.04"
   ansible.builtin.assert:
     that:
-      - ansible_distribution == "Ubuntu"
-      - ansible_distribution_version == "25.10"
-    fail_msg: "Forge requires Ubuntu Server 25.10. Detected: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      - ansible_facts['distribution'] == "Ubuntu"
+      - ansible_facts['distribution_version'] == "25.10"
+    fail_msg: "Forge requires Ubuntu Server 25.10. Detected: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
 
 - name: "base | update apt cache"
   ansible.builtin.apt:
