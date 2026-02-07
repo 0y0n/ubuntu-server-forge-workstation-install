@@ -21,8 +21,8 @@
 
   roles:
     - role: base          # idempotent OS / update / git
-    - role: nvidia_host   # NVIDIA driver (host, not container)
     - role: desktop       # xfce4-minimal + chrome
+    - role: nvidia_host   # NVIDIA driver (host, not container)    
     - role: ide           # VSCode + JetBrains Community
     - role: kvm           # qemu-kvm, SSH keypair, both VM definitions
 
