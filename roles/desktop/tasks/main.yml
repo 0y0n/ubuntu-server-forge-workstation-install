@@ -7,14 +7,7 @@
 - name: "desktop | install xfce4 core (minimal)"
   ansible.builtin.apt:
     name:
-      - xfce4
-      - xfce4-terminal
-      - xfce4-panel
-      - xfce4-desktop
-      - xfce4-session
-      - lightdm
-      - lightdm-gtk-greeter
-      - xdg-user-dirs
+      - xubuntu-desktop-minimal
     state: present
   environment:
     DEBIAN_FRONTEND: noninteractive
