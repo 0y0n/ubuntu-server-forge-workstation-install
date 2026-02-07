@@ -12,7 +12,7 @@
     update_cache: true
 
 - name: "nvidia_host | install recommended driver"
-  ansible.builtin.command: ubuntu-drivers install
+  ansible.builtin.command: ubuntu-drivers autoinstall
   register: nvidia_install
   changed_when: "'install' in nvidia_install.stdout.lower()"
 
