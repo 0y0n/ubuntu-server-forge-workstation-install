@@ -11,7 +11,15 @@
 
 ## Quick start
 
-**Never pipe scripts directly to bash from the internet.** Follow this secure procedure:
+One-liner but less secure
+
+```bash
+# Download the installer and run
+curl -fsSL https://raw.githubusercontent.com/0y0n/forge/main/install.sh | bash
+
+```
+
+To be more secure procedure (**Never pipe scripts directly to bash from the internet.**):
 
 ```bash
 # 1. Download the installer
@@ -33,7 +41,7 @@ It uses `sudo` internally for commands that require elevated privileges.
 > **Important:** Run as a regular user, not as root. The script will prompt for
 > your password when sudo is needed.
 
-> **Prerequisite:** a fresh **Ubuntu Server 24.04 LTS** install on bare metal
+> **Prerequisite:** a fresh **Ubuntu Server 25.10 LTS** install on bare metal
 > or a VM with at least the specs listed in [Hardware](#hardware).
 
 ---
@@ -43,8 +51,8 @@ It uses `sudo` internally for commands that require elevated privileges.
 ```
 remote-workstation          (physical host — this machine)
 │
-├── XFCE4 desktop + Chrome
 ├── NVIDIA host driver
+├── gnome minimal desktop + Chrome
 ├── VS Code + JetBrains Community (IntelliJ / PyCharm / RustRover)
 │
 └── KVM / QEMU
@@ -100,9 +108,9 @@ host at idle.  Adjust `vm_dev_workstation` / `vm_forge_infra` in
 │   ├── hosts.yml                       # 3-host static inventory
 │   └── group_vars/
 │       ├── all.yml                     # version pins & shared paths
-│       ├── remote_workstation.yml      # VM specs, NVIDIA branch
-│       ├── dev_workstation.yml         # Bazel remote endpoints
-│       └── forge_infra.yml             # service ports, DB list, k3s pods
+│       ├── remote-workstation.yml      # VM specs, NVIDIA branch
+│       ├── dev-workstation.yml         # Bazel remote endpoints
+│       └── forge-infra.yml             # service ports, DB list, k3s pods
 │
 ├── playbooks/
 │   └── remote_workstation.yml          # single entry-point: 3 plays in sequence
@@ -137,7 +145,7 @@ host at idle.  Adjust `vm_dev_workstation` / `vm_forge_infra` in
 
 | Step | Action |
 |------|--------|
-| 1 | Assert **Ubuntu Server 24.04** — hard fail otherwise |
+| 1 | Assert **Ubuntu Server 25.10** — hard fail otherwise |
 | 2 | `apt update && apt upgrade` |
 | 3 | Install `git` |
 | 4 | Clone this repo into `~/forge` (or pull if already present) |
