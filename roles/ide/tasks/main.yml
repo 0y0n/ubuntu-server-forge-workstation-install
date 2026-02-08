@@ -46,13 +46,12 @@
     - vscjava.vscode-java-pack
     - ms-vscode.remote-ssh
     - ms-vscode-remote.vscode-remote-extensionpack
-    - calaumai.continue
-    - anysphere.cursor          # OpenCode / Cursor extension
+    - saoudrizwan.claude-dev
     - bazelbuild.bazel-vs-code
   environment:
-    HOME: "{{ ansible_env.HOME }}"
-  # code CLI may fail for first run if no display; best-effort, not fatal
-  ignore_errors: true    # extensions install at next real launch anyway
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
+  become: true
+  become_user: "{{ ansible_facts['user_id'] }}"
 
 # ── JetBrains Community Editions ─────────────────────────────────────────────
 - name: "ide | download & install IntelliJ IDEA Community"
