@@ -3,12 +3,15 @@
 # Forge — Bootstrap installer for remote-workstation
 # 
 # SECURITY: Never pipe scripts directly to bash from the internet.
-# 
-# Recommended installation procedure:
+#
+# Recommended secure installation procedure:
 #   1. curl -fsSL https://raw.githubusercontent.com/0y0n/forge/main/install.sh -o install.sh
 #   2. less install.sh        # Review the script content
 #   3. chmod +x install.sh
 #   4. ./install.sh           # Run as regular user; script uses sudo internally when needed
+#
+# Else Onliner install procedure (should not be done on internet source:
+#   curl -fsSL https://raw.githubusercontent.com/0y0n/forge/main/install.sh | bash
 # ==============================================================================
 set -euo pipefail
 
@@ -61,15 +64,7 @@ DEBIAN_FRONTEND=noninteractive sudo apt-get upgrade -y -qq
 
 # ── 4. Install git and ssh──────────────────────────────────────────────────────
 info "Ensuring git is installed …"
-sudo apt-get install -y -qq git ssh
-
-info "Check for local host as a know key"
-if ! grep -q "127.0.0.1" ~/.ssh/known_hosts 2>/dev/null; then
-    info "Add 127.0.0.1 to known_hosts..."
-    ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts 2>/dev/null
-else
-    info "127.0.0.1 present in known_hosts..."
-fi
+sudo apt-get install -y -qq git
 
 # ── 5. Clone Forge repository ────────────────────────────────────────────────
 if [[ -d "$REPO_DIR/.git" ]]; then
