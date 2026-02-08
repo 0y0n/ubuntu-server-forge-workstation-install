@@ -93,7 +93,7 @@ The reference prototype runs on:
 
 Default VM allocation leaves ~16 GB and all physical cores available to the
 host at idle.  Adjust `vm_dev_workstation` / `vm_forge_infra` in
-`inventory/group_vars/remote_workstation.yml`.
+`inventory/host_vars/remote-workstation.yml`.
 
 ---
 
@@ -106,8 +106,9 @@ host at idle.  Adjust `vm_dev_workstation` / `vm_forge_infra` in
 │
 ├── inventory/
 │   ├── hosts.yml                       # 3-host static inventory
-│   └── group_vars/
-│       ├── all.yml                     # version pins & shared paths
+│   ├── group_vars/
+│   │   └── all.yml                     # version pins & shared paths
+│   └── host_vars/
 │       ├── remote-workstation.yml      # VM specs, NVIDIA branch
 │       ├── dev-workstation.yml         # Bazel remote endpoints
 │       └── forge-infra.yml             # service ports, DB list, k3s pods
@@ -145,7 +146,7 @@ host at idle.  Adjust `vm_dev_workstation` / `vm_forge_infra` in
 
 | Step | Action |
 |------|--------|
-| 1 | Assert **Ubuntu Server 25.10** — hard fail otherwise |
+| 1 | Assert **Ubuntu 25.10** — hard fail otherwise |
 | 2 | `apt update && apt upgrade` |
 | 3 | Install `git` |
 | 4 | Clone this repo into `~/forge` (or pull if already present) |
@@ -204,7 +205,7 @@ partial failure or a config change converges without wiping state.
 | dev-workstation | 8 | 24 GB | 120 GB | 2222 |
 | forge-infra | 6 | 24 GB | 200 GB | 2223 |
 
-Tune in `inventory/group_vars/remote_workstation.yml`.
+Tune in `inventory/host_vars/remote-workstation.yml`.
 
 ---
 
@@ -220,7 +221,7 @@ Key current pins:
 | Bazel | `bazel_version` | 7.1.1 |
 | Traefik | `traefik_version` | v2.11.2 |
 | Helm | `helm_version` | v3.14.4 |
-| NVIDIA driver branch | `nvidia_driver_branch` | 545 |
+| Vault | `vault_version` | 2.6.0 |
 | Node | `node_version` | 20 |
 | Redis | `redis_version` | 7 |
 
@@ -233,7 +234,7 @@ unreachable.  After an initial fetch/build cycle the local Bazel cache and
 source copies are sufficient for day-to-day development.  When infra comes
 back online, remote cache (`buildbody-cache`) and remote execution
 (`buildbody-executor`) kick in transparently via the Bazel remote
-endpoints configured in `inventory/group_vars/dev_workstation.yml`.
+endpoints configured in `inventory/host_vars/dev-workstation.yml`.
 
 ---
 
