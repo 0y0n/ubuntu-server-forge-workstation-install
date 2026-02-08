@@ -5,6 +5,15 @@
 # =============================================================================
 ---
 # ── Visual Studio Code ───────────────────────────────────────────────────────
+- name: "gpg apt dependencies"
+  ansible.builtin.apt:
+    name: 
+      - wget
+      - gpg
+      - apt-transport-https
+    state: present
+    update_cache: true
+
 - name: "ide | add Microsoft GPG key"
   ansible.builtin.shell: >
     wget -qO - https://packages.microsoft.com/keys/microsoft.asc |
@@ -16,7 +25,7 @@
   ansible.builtin.apt_repository:
     repo: >
       deb [signed-by=/usr/share/keyrings/microsoft.gpg arch=amd64]
-      https://packages.microsoft.com/vscode stable main
+      https://packages.microsoft.com/repos/code stable main
     state: present
     filename: vscode
 
