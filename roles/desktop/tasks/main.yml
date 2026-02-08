@@ -1,20 +1,31 @@
 # =============================================================================
 # roles/desktop/tasks/main.yml
-# Minimal XFCE4 desktop + Google Chrome.
+# Minimal gnome desktop + Google Chrome.
 # Deliberately avoids GNOME / KDE bloat to keep RSS low for LLM headroom.
 # =============================================================================
 ---
-- name: "desktop | install xfce4 core (minimal)"
+- name: "desktop | install gnome core (minimal)"
   ansible.builtin.apt:
     name:
-      - xubuntu-desktop-minimal
+      - gdm3
+      - gnome-shell
+      - gnome-session
+      - gnome-control-center
+      - gnome-terminal
+      - nemo
+      - nemo-fileroller
+      - network-manager-gnome
+      - gnome-tweaks
+      - yaru-theme-gtk
+      - yaru-theme-icon
+      - btop
     state: present
   environment:
     DEBIAN_FRONTEND: noninteractive
 
-- name: "desktop | enable lightdm"
+- name: "desktop | enable gdm3"
   ansible.builtin.systemd:
-    name:    lightdm
+    name:    gdm3
     enabled: true
     state:   started
 
