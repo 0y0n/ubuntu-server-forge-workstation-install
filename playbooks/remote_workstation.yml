@@ -29,6 +29,9 @@
 - name: "Forge — dev-workstation (KVM guest)"
   hosts: dev-workstation
   gather_facts: true
+  tasks:
+    - name: "Verify connectivity"
+      ansible.builtin.ping:
 
   roles:
     - role: base

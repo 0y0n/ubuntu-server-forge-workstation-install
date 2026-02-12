@@ -14,11 +14,17 @@
   ansible.builtin.apt:
     name:
       - qemu-kvm
-      - libvirt-bin
+      - libvirt-daemon-system
+      - libvirt-clients
       - virt-manager
       - virtinst            # virt-install CLI
       - cloud-init
       - nmap                # for portcheck in wait task
+      - cloud-image-utils
+      - xorriso
+      - python3-lxml
+      - python3-libvirt      
+      - libnss-libvirt
     state: present
     update_cache: true
 
@@ -31,25 +37,30 @@
 
 - name: "kvm | add current user to libvirt group"
   ansible.builtin.user:
-    name:   "{{ ansible_env.SUDO_USER | default(ansible_env.USER) }}"
+    name:   "{{ ansible_facts['user_id'] }}"
     groups: libvirt
     append: true
 
+- name: "kvm | configure nsswitch to use libvirt dns"
+  ansible.builtin.lineinfile:
+    path: /etc/nsswitch.conf
+    regexp: '^hosts: '
+    line: 'hosts:          files libvirt dns'
+  become: true
+
 # ── SSH key ──────────────────────────────────────────────────────────────────
 - name: "kvm | generate SSH keypair for VM guests"
-  ansible.builtin.command: >
-    ssh-keygen -t ed25519 -N "" -f {{ forge_ssh_key }}
-  args:
-    creates: "{{ forge_ssh_key }}"
-
-- name: "kvm | read public key into var"
-  ansible.builtin.slurp:
-    src: "{{ forge_ssh_pub }}"
-  register: forge_pubkey_b64
+  community.crypto.openssh_keypair:
+    path: "{{ forge_ssh_key }}"
+    type: ed25519
+    state: present
+    owner: "{{ ansible_facts['user_id'] }}"
+    mode: '0600'
+  register: ssh_key_result
 
 - name: "kvm | set pubkey fact"
   ansible.builtin.set_fact:
-    forge_pubkey: "{{ forge_pubkey_b64.content | b64decode }}"
+    forge_pubkey: "{{ ssh_key_result.public_key }}"
 
 # ── cloud image ──────────────────────────────────────────────────────────────
 - name: "kvm | ensure vm-images directory"
@@ -58,10 +69,10 @@
     state: directory
     mode:  "0755"
 
-- name: "kvm | download Ubuntu 24.04 cloud image (cached)"
+- name: "kvm | download Ubuntu cloud image (cached)"
   ansible.builtin.get_url:
     url:  "{{ ubuntu_cloud_image_url }}"
-    dest: "{{ forge_vm_images }}/noble-server-cloudimg-amd64.img"
+    dest: "{{ forge_vm_images }}/server-cloudimg-amd64.img"
     mode: "0644"
 
 # ── provision helper (imported per-VM) ───────────────────────────────────────

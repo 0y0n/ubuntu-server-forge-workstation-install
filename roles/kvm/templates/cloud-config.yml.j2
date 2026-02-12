@@ -12,7 +12,7 @@ users:
     groups: [ sudo, adm, cdrom, plugdev ]
     shell:  /bin/bash
     ssh_authorized_keys:
-      - {{ forge_pubkey }}
+      - "{{ forge_pubkey }}"
     sudo: ALL=(ALL) NOPASSWD:ALL
     lock_passwd: true
 
@@ -21,7 +21,7 @@ ssh_pwauth: false
 default_user:
   name:               forge
   ssh_authorized_keys:
-    - {{ forge_pubkey }}
+    - "{{ forge_pubkey }}"
   sudo:               ALL=(ALL) NOPASSWD:ALL
   lock_passwd:        true
 

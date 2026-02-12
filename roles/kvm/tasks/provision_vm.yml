@@ -6,15 +6,23 @@
 ---
 - name: "kvm | [{{ vm.name }}] copy base image → qcow2"
   ansible.builtin.copy:
-    src:  "{{ forge_vm_images }}/noble-server-cloudimg-amd64.img"
+    src:  "{{ forge_vm_images }}/server-cloudimg-amd64.img"
     dest: "{{ forge_vm_images }}/{{ vm.name }}.qcow2"
     remote_src: true
-  when: not (ansible_path_exists | default(false))   # crude idempotency check
+    force: false 
+  register: disk_copy
+
+- name: "kvm | [{{ vm.name }}] get current disk size"
+  ansible.builtin.command: "qemu-img info --output=json -U {{ forge_vm_images }}/{{ vm.name }}.qcow2"
+  register: disk_info
+  changed_when: false
+  become: true
 
 - name: "kvm | [{{ vm.name }}] resize disk"
   ansible.builtin.command: >
     qemu-img resize {{ forge_vm_images }}/{{ vm.name }}.qcow2 {{ vm.disk_gb }}G
-  changed_when: true   # always resize is cheap & idempotent on qcow2
+  become: true
+  when: (disk_info.stdout | from_json)['virtual-size'] < (vm.disk_gb | int * 1024 * 1024 * 1024)
 
 # ── cloud-init seed ─────────────────────────────────────────────────────────
 - name: "kvm | [{{ vm.name }}] render cloud-config"
@@ -29,65 +37,146 @@
     dest: "{{ forge_vm_images }}/{{ vm.name }}-network-config.yml"
     mode: "0644"
 
-- name: "kvm | [{{ vm.name }}] create cloud-init seed ISO"
+- name: "kvm | [{{ vm.name }}] ensure seed directory exists"
+  ansible.builtin.file:
+    path: "{{ forge_vm_images }}/seed/{{ vm.name }}"
+    state: directory
+    mode: '0755'
+
+- name: "kvm | [{{ vm.name }}] render cloud-init files"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ forge_vm_images }}/{{ vm.name }}-{{ item.dest }}"
+    mode: '0644'
+  loop:
+    - { src: 'cloud-config.yml.j2', dest: 'user-data' }
+    - { src: 'network-config.yml.j2', dest: 'network-config' }
+    - { src: 'meta-data.yml.j2', dest: 'meta-data' } # Ne pas oublier l'instance-id
+
+- name: "kvm | [{{ vm.name }}] generate cloud-init seed ISO"
   ansible.builtin.command: >
-    cd {{ forge_vm_images }} &&
-    mkdir -p seed/{{ vm.name }} &&
-    cp {{ vm.name }}-cloud-config.yml  seed/{{ vm.name }}/user-data &&
-    cp {{ vm.name }}-network-config.yml seed/{{ vm.name }}/network-config &&
-    echo "instance-id: {{ vm.name }}" > seed/{{ vm.name }}/meta-data &&
-    cd seed/{{ vm.name }} &&
-    genisoimage -output {{ forge_vm_images }}/{{ vm.name }}-cidata.iso
-      -volid cidata -cloud-init -input-charset utf-8
-      -isohybrid-mbr /usr/lib/syslinux/mbr.bin
-      -r -V cidata .
+    cloud-localds 
+    -N {{ forge_vm_images }}/{{ vm.name }}-network-config
+    {{ forge_vm_images }}/{{ vm.name }}-cidata.iso 
+    {{ forge_vm_images }}/{{ vm.name }}-user-data 
+    {{ forge_vm_images }}/{{ vm.name }}-meta-data
+  become: true
   args:
-    executable: /bin/bash
-  # genisoimage may not exist; fallback to mksquashfs or nocloud dir below
-  ignore_errors: true
+    creates: "{{ forge_vm_images }}/{{ vm.name }}-cidata.iso"
 
 # ── virt-install ─────────────────────────────────────────────────────────────
-- name: "kvm | [{{ vm.name }}] check if VM already exists"
+- name: "kvm | [{{ vm.name }}] get existing vm list"
   ansible.builtin.command: virsh list --all --name
-  register: virsh_list
+  register: vms_list
+  changed_when: false
+  become: true
 
-- name: "kvm | [{{ vm.name }}] define & start VM"
+- name: "kvm | [{{ vm.name }}] allow hypervisor to traverse home directory"
+  ansible.builtin.acl:
+    path: "{{ item }}"
+    entity: libvirt-qemu
+    etype: user
+    permissions: x
+    state: present
+  become: true
+  loop:
+    - "{{ forge_home }}"
+    - "{{ forge_repo }}"
+    - "{{ forge_vm_images }}"  
+
+- name: "kvm | [{{ vm.name }}] set permissions on disk image"
+  ansible.builtin.file:
+    path: "{{ forge_vm_images }}/{{ vm.name }}.qcow2"
+    owner: libvirt-qemu
+    group: kvm
+    mode: '0660'
+  become: true  
+
+- name: "kvm | [{{ vm.name }}] define VM (without autostart)"
   ansible.builtin.command: >
     virt-install
-      --name       {{ vm.name }}
-      --vcpus      {{ vm.vcpus }}
-      --ram        {{ (vm.ram_gb | int) * 1024 }}
-      --disk       path={{ forge_vm_images }}/{{ vm.name }}.qcow2,bus=virtio
-      --ostype     linux
-      --graphics   none
-      --net        network=default,model=virtio
-      --net        network=default,model=virtio
-      --serial     pty
-      --console    pty
-      --cloud-init user={{ forge_vm_images }}/{{ vm.name }}-cloud-config.yml,network={{ forge_vm_images }}/{{ vm.name }}-network-config.yml
-      --nostart
-  when: vm.name not in virsh_list.stdout
+    --name {{ vm.name }}
+    --vcpus {{ vm.vcpus }}
+    --ram {{ (vm.ram_gb | int) * 1024 }}
+    --disk path={{ forge_vm_images }}/{{ vm.name }}.qcow2,format=qcow2
+    --import
+    --os-variant ubuntu22.04
+    --network network=default,model=virtio
+    --graphics none
+    --noautoconsole
+    --noreboot
+    --cloud-init
+  become: true
+  register: virt_install_result
+  when: vm.name not in vms_list.stdout_lines
 
-- name: "kvm | [{{ vm.name }}] attach SSH port-forward (socat, background)"
-  # Creates a persistent port-forward: host:ssh_host_port → guest:22
-  # In production replace with a proper NAT / nftables rule.
-  ansible.builtin.command: >
-    nohup socat TCP-LISTEN:{{ vm.ssh_host_port }},reuseaddr,fork
-    SYSTEM:"virsh console {{ vm.name }} --force" &
-  # Placeholder; actual implementation uses nftables rule to forward to guest IP.
-  # Will be refined once guest gets its IP via DHCP.
-  ignore_errors: true
-
-- name: "kvm | [{{ vm.name }}] start VM"
+- name: "kvm | [{{ vm.name }}] start VM if not running"
   ansible.builtin.command: virsh start {{ vm.name }}
-  ignore_errors: true    # may already be running
+  become: true
+  register: start_result
+  failed_when: 
+    - start_result.rc != 0 
+    - "'already active' not in start_result.stderr"
+  changed_when:  start_result.rc == 0
+
+- name: "kvm | [{{ vm.name }}] wait for guest IP"
+  ansible.builtin.shell: |
+    set -o pipefail
+    virsh domifaddr {{ vm.name }} --source lease | grep ipv4 | awk '{print $4}' | cut -d/ -f1
+  args:
+    executable: /bin/bash
+  become: true
+  register: vm_ip_cmd
+  until: vm_ip_cmd.stdout != ""
+  retries: 15  
+  delay: 5    
+  changed_when: false
+
+- name: "kvm | [{{ vm.name }}] get guest IP"
+  ansible.builtin.debug:
+    msg: "VM {{ vm.name }} is reachable at {{ vm_ip_cmd.stdout }}"
+  when: vm_ip_cmd.stdout != ""
+
+- name: "kvm | parse IP from command"
+  set_fact:
+    vm_ip: "{{ vm_ip_cmd.stdout }}"  
+
+
+- name: "kvm | [{{ vm.name }}] setup port-forwarding (DNAT)"
+  ansible.builtin.iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    destination_port: "{{ vm.ssh_host_port }}"
+    jump: DNAT
+    to_destination: "{{ vm_ip }}:22"
+  become: true
+  when: vm_ip != ""
+
+- name: "kvm | [{{ vm.name }}] get MAC address"
+  ansible.builtin.command: "virsh domiflist {{ vm.name }} --inactive"
+  register: vm_mac_cmd
+  changed_when: false
+  become: true
+
+- name: "kvm | parse MAC from command"
+  set_fact:
+    vm_mac: "{{ vm_mac_cmd.stdout_lines[2].split()[4] }}"      
 
 # ── wait for SSH ─────────────────────────────────────────────────────────────
-- name: "kvm | [{{ vm.name }}] wait for SSH to become available"
+- name: "kvm | [{{ vm.name }}] wait for SSH using hostname"
   ansible.builtin.wait_for:
-    host: 127.0.0.1
-    port: "{{ vm.ssh_host_port }}"
-    delay:   10
-    timeout: 600
-    state:   started
+    host: "{{ vm_ip }}"
+    port: 22
+    timeout: 60
+    state: started
   # This will block until the guest is up and sshd is listening.
+
+- name: "kvm | add guest to dynamic inventory"
+  ansible.builtin.add_host:
+    name: "{{ vm.name }}"
+    ansible_host: "{{ vm_ip }}"
+    ansible_port: 22           
+    ansible_user: forge
+    ansible_ssh_private_key_file: "{{ forge_ssh_key }}"
+    groups: "virtual_machines"

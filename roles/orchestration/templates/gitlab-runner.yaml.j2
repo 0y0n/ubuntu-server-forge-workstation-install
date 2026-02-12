@@ -29,7 +29,7 @@ spec:
       containers:
         - name:  runner
           # TODO: replace with a Packer-baked image that has bazel + dev_tools
-          image:   ubuntu:24.04
+          image:   ubuntu:25.10
           command: ["sleep", "infinity"]
           resources:
             requests:

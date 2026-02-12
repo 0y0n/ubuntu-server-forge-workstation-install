@@ -23,7 +23,7 @@
   ansible.builtin.apt_repository:
     repo: >
       deb [signed-by=/usr/share/keyrings/nvidia-developer.gpg]
-      https://developer.download.nvidia.com/cuda/ubuntu2404/x86_64
+      https://developer.download.nvidia.com/cuda/ubuntu2510/x86_64
       /
       main
     state: present

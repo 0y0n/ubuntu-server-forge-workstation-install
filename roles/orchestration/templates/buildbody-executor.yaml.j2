@@ -23,7 +23,7 @@ spec:
       containers:
         - name:    executor
           # TODO: replace with Packer-baked image (bazel + java/python/rust tools)
-          image:   ubuntu:24.04
+          image:   ubuntu:25.10
           command: ["sleep", "infinity"]
           resources:
             requests:

@@ -145,8 +145,8 @@ check_git_config "user.email" "Git Email Address"
 if [[ -d "$REPO_DIR/.git" ]]; then
   info "Repo already exists at ${REPO_DIR}, fetching latest …"
   # Discard any local changes and force update to match remote
-  git -C "$REPO_DIR" fetch origin
-  git -C "$REPO_DIR" reset --hard origin/main
+  # DONTCOMIT git -C "$REPO_DIR" fetch origin
+  # DONTCOMIT git -C "$REPO_DIR" reset --hard origin/main
 else
   info "Cloning repo → ${REPO_DIR}"
   git clone --depth 1 "$REPO_URL" "$REPO_DIR"
